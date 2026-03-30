@@ -7,14 +7,16 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         // Product Mappings
-        CreateMap<Product, ProductResponseDto>()
-            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name));
+        CreateMap<Product, ProductResponseDto>();
+            //.ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name));
         CreateMap<ProductCreateDto, Product>();
 
         // Category Mappings
         CreateMap<Category, CategoryDto>().ReverseMap();
 
         // Customer Mappings
+        CreateMap<OrderItem, OrderItemResponseDto>()
+            .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.Name));
         CreateMap<Customer, CustomerDto>().ReverseMap();
 
         // Order Mappings

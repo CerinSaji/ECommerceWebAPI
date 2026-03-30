@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceWebAPI.Models;
+using ECommerceWebAPI.DTOs;
+using AutoMapper;
 
 namespace ECommerceWebAPI.Controllers
 {
@@ -14,94 +11,50 @@ namespace ECommerceWebAPI.Controllers
     public class OrderItemController : ControllerBase
     {
         private readonly ApplicationContext _context;
+        private readonly IMapper _mapper;
 
-        public OrderItemController(ApplicationContext context)
+        public OrderItemController(ApplicationContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         // GET: api/OrderItem
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<OrderItem>>> GetOrderItems()
+        public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetOrderItems()
         {
-            return await _context.OrderItems.ToListAsync();
+            var items = await _context.OrderItems
+                .Include(oi => oi.Product)
+                .ToListAsync();
+
+            return Ok(_mapper.Map<IEnumerable<OrderItemResponseDto>>(items));
         }
 
         // GET: api/OrderItem/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<OrderItem>> GetOrderItem(int id)
+        public async Task<ActionResult<OrderItemResponseDto>> GetOrderItem(int id)
         {
-            var orderItem = await _context.OrderItems.FindAsync(id);
+            var orderItem = await _context.OrderItems
+                .Include(oi => oi.Product)
+                .FirstOrDefaultAsync(oi => oi.Id == id);
 
-            if (orderItem == null)
-            {
-                return NotFound();
-            }
+            if (orderItem == null) return NotFound();
 
-            return orderItem;
+            return _mapper.Map<OrderItemResponseDto>(orderItem);
         }
 
-        // PUT: api/OrderItem/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutOrderItem(int id, OrderItem orderItem)
+        // GET: api/OrderItem/ByOrder/5
+        [HttpGet("ByOrder/{orderId}")]
+        public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetItemsByOrder(int orderId)
         {
-            if (id != orderItem.Id)
-            {
-                return BadRequest();
-            }
+            var items = await _context.OrderItems
+                .Where(oi => oi.OrderId == orderId)
+                .Include(oi => oi.Product)
+                .ToListAsync();
 
-            _context.Entry(orderItem).State = EntityState.Modified;
+            if (!items.Any()) return NotFound($"No items found for Order ID {orderId}");
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!OrderItemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/OrderItem
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<OrderItem>> PostOrderItem(OrderItem orderItem)
-        {
-            _context.OrderItems.Add(orderItem);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetOrderItem", new { id = orderItem.Id }, orderItem);
-        }
-
-        // DELETE: api/OrderItem/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteOrderItem(int id)
-        {
-            var orderItem = await _context.OrderItems.FindAsync(id);
-            if (orderItem == null)
-            {
-                return NotFound();
-            }
-
-            _context.OrderItems.Remove(orderItem);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool OrderItemExists(int id)
-        {
-            return _context.OrderItems.Any(e => e.Id == id);
+            return Ok(_mapper.Map<IEnumerable<OrderItemResponseDto>>(items));
         }
     }
 }

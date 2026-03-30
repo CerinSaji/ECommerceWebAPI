@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceWebAPI.Models;
+using ECommerceWebAPI.DTOs; 
+using AutoMapper;
 
 namespace ECommerceWebAPI.Controllers
 {
@@ -14,44 +11,46 @@ namespace ECommerceWebAPI.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly ApplicationContext _context;
+        private readonly IMapper _mapper;
 
-        public CategoryController(ApplicationContext context)
+        public CategoryController(ApplicationContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         // GET: api/Category
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
         {
-            return await _context.Categories.ToListAsync();
+            var categories = await _context.Categories.ToListAsync();
+            
+            // Map the list of entities to a list of DTOs
+            return Ok(_mapper.Map<IEnumerable<CategoryDto>>(categories));
         }
 
         // GET: api/Category/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Category>> GetCategory(int id)
+        public async Task<ActionResult<CategoryDto>> GetCategory(int id)
         {
             var category = await _context.Categories.FindAsync(id);
 
-            if (category == null)
-            {
-                return NotFound();
-            }
+            if (category == null) return NotFound();
 
-            return category;
+            return _mapper.Map<CategoryDto>(category);
         }
 
         // PUT: api/Category/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCategory(int id, Category category)
+        public async Task<IActionResult> PutCategory(int id, CategoryDto categoryDto)
         {
-            if (id != category.Id)
-            {
-                return BadRequest();
-            }
+            if (id != categoryDto.Id) return BadRequest();
 
-            _context.Entry(category).State = EntityState.Modified;
+            var categoryInDb = await _context.Categories.FindAsync(id);
+            if (categoryInDb == null) return NotFound();
+
+            // Use AutoMapper to map the DTO onto the existing tracked entity
+            _mapper.Map(categoryDto, categoryInDb);
 
             try
             {
@@ -59,28 +58,26 @@ namespace ECommerceWebAPI.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!CategoryExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                if (!CategoryExists(id)) return NotFound();
+                else throw;
             }
 
             return NoContent();
         }
 
         // POST: api/Category
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Category>> PostCategory(Category category)
+        public async Task<ActionResult<CategoryDto>> PostCategory(CategoryDto categoryDto)
         {
+            var category = _mapper.Map<Category>(categoryDto);
+
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetCategory", new { id = category.Id }, category);
+            // Map back to DTO for the response
+            var responseDto = _mapper.Map<CategoryDto>(category);
+            
+            return CreatedAtAction(nameof(GetCategory), new { id = responseDto.Id }, responseDto);
         }
 
         // DELETE: api/Category/5
@@ -88,10 +85,7 @@ namespace ECommerceWebAPI.Controllers
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-            {
-                return NotFound();
-            }
+            if (category == null) return NotFound();
 
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
@@ -99,9 +93,6 @@ namespace ECommerceWebAPI.Controllers
             return NoContent();
         }
 
-        private bool CategoryExists(int id)
-        {
-            return _context.Categories.Any(e => e.Id == id);
-        }
+        private bool CategoryExists(int id) => _context.Categories.Any(e => e.Id == id);
     }
 }
