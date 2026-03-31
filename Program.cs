@@ -5,12 +5,13 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // Add services to the container.
 // builder.Services.AddDbContext<ProductContext>(options =>
 //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<ApplicationContext>(options =>
-    options.UseInMemoryDatabase("ECommerceDB")); //in memory DB for now
+    options.UseSqlServer(connectionString)); 
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
