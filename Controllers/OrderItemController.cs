@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using ECommerceWebAPI.Models;
 using ECommerceWebAPI.DTOs;
 using AutoMapper;
+using MongoDB.Driver;
+using ECommerceWebAPI.Data;
 
 namespace ECommerceWebAPI.Controllers
 {
@@ -10,12 +12,13 @@ namespace ECommerceWebAPI.Controllers
     [ApiController]
     public class OrderItemController : ControllerBase
     {
-        private readonly ApplicationContext _context;
+        //private readonly ApplicationContext _context;
         private readonly IMapper _mapper;
+        private readonly MongoDbService _mongoService;
 
-        public OrderItemController(ApplicationContext context, IMapper mapper)
+        public OrderItemController(MongoDbService mongoService, IMapper mapper)
         {
-            _context = context;
+            _mongoService = mongoService;
             _mapper = mapper;
         }
 
@@ -23,8 +26,8 @@ namespace ECommerceWebAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetOrderItems()
         {
-            var items = await _context.OrderItems
-                .Include(oi => oi.Product)
+            var items = await _mongoService.OrderItems
+                .Find(_ => true)
                 .ToListAsync();
 
             return Ok(_mapper.Map<IEnumerable<OrderItemResponseDto>>(items));
@@ -32,11 +35,11 @@ namespace ECommerceWebAPI.Controllers
 
         // GET: api/OrderItem/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<OrderItemResponseDto>> GetOrderItem(int id)
+        public async Task<ActionResult<OrderItemResponseDto>> GetOrderItem(string id)
         {
-            var orderItem = await _context.OrderItems
-                .Include(oi => oi.Product)
-                .FirstOrDefaultAsync(oi => oi.Id == id);
+            var orderItem = await _mongoService.OrderItems
+                .Find(oi => oi.Id == id)
+                .FirstOrDefaultAsync();
 
             if (orderItem == null) return NotFound();
 
@@ -45,11 +48,10 @@ namespace ECommerceWebAPI.Controllers
 
         // GET: api/OrderItem/ByOrder/5
         [HttpGet("ByOrder/{orderId}")]
-        public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetItemsByOrder(int orderId)
+        public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetItemsByOrder(string orderId)
         {
-            var items = await _context.OrderItems
-                .Where(oi => oi.OrderId == orderId)
-                .Include(oi => oi.Product)
+            var items = await _mongoService.OrderItems
+                .Find(oi => oi.OrderId == orderId)
                 .ToListAsync();
 
             if (!items.Any()) return NotFound($"No items found for Order ID {orderId}");

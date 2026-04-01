@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ECommerceWebAPI.Models;
 using ECommerceWebAPI.DTOs; 
-using AutoMapper;          
+using AutoMapper;
+using ECommerceWebAPI.Data;
+using MongoDB.Driver;
 
 namespace ECommerceWebAPI.Controllers
 {
@@ -10,12 +12,13 @@ namespace ECommerceWebAPI.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly ApplicationContext _context;
+        //private readonly ApplicationContext _context;
+        private readonly MongoDbService _mongoService;
         private readonly IMapper _mapper; 
 
-        public ProductController(ApplicationContext context, IMapper mapper) 
+        public ProductController(MongoDbService mongoService, IMapper mapper) 
         {
-            _context = context;
+            _mongoService = mongoService;
             _mapper = mapper;
         }
 
@@ -23,21 +26,25 @@ namespace ECommerceWebAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts()
         {
-            var products = await _context.Products
+            var products = await _mongoService.Products.Find(_ => true)
                 .ToListAsync();
+            
+            if (products == null || products.Count == 0) 
+                return NotFound(new { message = "No products found." });
 
             return Ok(_mapper.Map<IEnumerable<ProductResponseDto>>(products));
         }
 
         // GET: api/Product/5
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<ProductResponseDto>> GetProduct([FromRoute] int id)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ProductResponseDto>> GetProduct([FromRoute] string id)
         {
-            if(id <= 0)
+            if(string.IsNullOrEmpty(id))
                 return BadRequest("Invalid product ID.");
 
-            var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == id);
+            var product = await _mongoService.Products
+                .Find(p => p.Id == id)
+                .FirstOrDefaultAsync();
 
             if (product == null) 
                 return NotFound(new { message = $"Product with ID {id} was not found." });
@@ -49,51 +56,77 @@ namespace ECommerceWebAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<ProductResponseDto>> PostProduct(ProductCreateDto productDto) //from ProductCreateDto instead of Product
         {
+            var category = await _mongoService.Categories
+                .Find(c => c.Id == productDto.CategoryId)
+                .FirstOrDefaultAsync();
+
+            if (category == null)
+            {
+                //invalid category id
+                return BadRequest($"Validation Error: Category with ID '{productDto.CategoryId}' does not exist.");
+            }
+
+            var existingProduct = await _mongoService.Products
+                .Find(p => p.Name.ToLower() == productDto.Name.ToLower()) //case insensitive check
+                .FirstOrDefaultAsync();
+            
+            if (existingProduct != null)
+            {
+                return Conflict($"A product with the name '{productDto.Name}' already exists. Please update the existing product or choose a different name.");
+            }
+
             var product = _mapper.Map<Product>(productDto);
+            
+            await _mongoService.Products.InsertOneAsync(product);
 
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-
-            //mapback to ResponseDto for the result
             var response = _mapper.Map<ProductResponseDto>(product);
-            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, response);
+            return CreatedAtAction(nameof(GetProduct), new { id = response.Id }, response);
         }
 
         // PUT: api/Product/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduct(int id, ProductCreateDto productDto)
+        public async Task<IActionResult> PutProduct(string id, ProductCreateDto productDto)
         {
-            var product = await _context.Products.FindAsync(id);
+            var product = await _mongoService.Products.Find(p => p.Id == id).FirstOrDefaultAsync();
             if (product == null) return NotFound();
 
             //update existing entity with DTO values
             _mapper.Map(productDto, product);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProductExists(id)) return NotFound();
-                else throw;
-            }
+            // try
+            // {
+            //     await _context.SaveChangesAsync();
+            // }
+            // catch (DbUpdateConcurrencyException)
+            // {
+            //     if (!ProductExists(id)) return NotFound();
+            //     else throw;
+            // }
 
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(string id)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
+            // var product = await _context.Products.FindAsync(id);
+            // if (product == null) return NotFound();
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            // _context.Products.Remove(product);
+            // await _context.SaveChangesAsync();
+
+            // return NoContent();
+
+            var result = await _mongoService.Products.DeleteOneAsync(x => x.Id == id);
+    
+            if (result.DeletedCount == 0) return NotFound();
 
             return NoContent();
         }
 
-        private bool ProductExists(int id) => _context.Products.Any(e => e.Id == id);
+        private async Task<bool> ProductExists(string id) 
+        {
+            return await _mongoService.Products.Find(e => e.Id == id).AnyAsync();
+        }
     }
 }
