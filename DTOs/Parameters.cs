@@ -10,3 +10,11 @@ public class PaginationParameters
         set => _pageSize = (value > MaxPageSize) ? MaxPageSize : value;
     }
 }
+
+public class ProductParameters : PaginationParameters
+{
+    public string? SearchTerm { get; set; }
+    public string? CategoryId { get; set; }
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
+}
