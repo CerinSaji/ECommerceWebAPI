@@ -24,15 +24,20 @@ namespace ECommerceWebAPI.Controllers
 
         // GET: api/Product
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProduct([FromQuery] PaginationParameters parameters)
         {
-            var products = await _mongoService.Products.Find(_ => true)
-                .ToListAsync();
-            
-            if (products == null || products.Count == 0) 
-                return NotFound(new { message = "No products found." });
+            var totalItems = await _mongoService.Products.CountDocumentsAsync(FilterDefinition<Product>.Empty);
 
-            return Ok(_mapper.Map<IEnumerable<ProductResponseDto>>(products));
+            var products = await _mongoService.Products.Find(_ => true)
+                .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                .Limit(parameters.PageSize)
+                .ToListAsync();
+
+            var response = _mapper.Map<IEnumerable<ProductResponseDto>>(products);
+            
+            Response.Headers.Append("X-Total-Count", totalItems.ToString());
+
+            return Ok(response);
         }
 
         // GET: api/Product/5
