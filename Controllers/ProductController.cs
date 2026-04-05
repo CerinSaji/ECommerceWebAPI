@@ -28,32 +28,42 @@ namespace ECommerceWebAPI.Controllers
         //and filters for searching and filtering products
         public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts([FromQuery] ProductParameters filter)
         {
-            var builder = Builders<Product>.Filter;
-            var filterDef = builder.Empty; // Start with everything
+            var filterBuilder = Builders<Product>.Filter;
+            var filterDef = filterBuilder.Empty; // Start with everything
 
             // 1. Filter by Name (Case-Insensitive Search)
             if (!string.IsNullOrEmpty(filter.SearchTerm))
             {
-                filterDef &= builder.Regex(p => p.Name, new MongoDB.Bson.BsonRegularExpression(filter.SearchTerm, "i"));
+                filterDef &= filterBuilder.Regex(p => p.Name, new MongoDB.Bson.BsonRegularExpression(filter.SearchTerm, "i"));
             }
 
             // 2. Filter by Category
             if (!string.IsNullOrEmpty(filter.CategoryId))
             {
-                filterDef &= builder.Eq(p => p.CategoryId, filter.CategoryId);
+                filterDef &= filterBuilder.Eq(p => p.CategoryId, filter.CategoryId);
             }
 
             // 3. Filter by Price Range (Greater Than / Less Than)
             if (filter.MinPrice.HasValue)
             {
-                filterDef &= builder.Gte(p => p.Price, filter.MinPrice.Value);
+                filterDef &= filterBuilder.Gte(p => p.Price, filter.MinPrice.Value);
             }
             if (filter.MaxPrice.HasValue)
             {
-                filterDef &= builder.Lte(p => p.Price, filter.MaxPrice.Value);
+                filterDef &= filterBuilder.Lte(p => p.Price, filter.MaxPrice.Value);
             }
 
-            // 4. Execute Query with Pagination
+            //sort by price ascending or descending
+            var sortBuilder = Builders<Product>.Sort;
+            var sortDef = filter.SortBy?.ToLower() switch
+            {
+                "price_asc" => sortBuilder.Ascending(p => p.Price),
+                "price_desc" => sortBuilder.Descending(p => p.Price),
+                _ => null // No sorting
+            };
+
+
+            // finallly, execute Query with Pagination
             var products = await _mongoService.Products.Find(filterDef)
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
                 .Limit(filter.PageSize)

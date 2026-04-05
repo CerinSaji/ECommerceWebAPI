@@ -36,14 +36,14 @@ if (string.IsNullOrEmpty(databaseName))
     throw new Exception("CRITICAL: Database name not found. Check your .env file location!");
 }
 
-// Add services to the container.
+
+// Add (Registering) services to the container.
 // builder.Services.AddDbContext<ProductContext>(options =>
 //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddSingleton<MongoDbService>(sp => 
     new MongoDbService(connectionString!, databaseName!));
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddFluentValidationAutoValidation();
@@ -51,7 +51,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<OrderRequestValidator>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<RequestLogger>(); //custom mw for request logging
+
+//Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -62,7 +64,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowAll"); // Must be placed AFTER UseRouting and BEFORE UseAuthorization
+app.UseCors("AllowAll"); //must be placed AFTER UseRouting and BEFORE UseAuthorization
 
 app.UseHttpsRedirection();
 
