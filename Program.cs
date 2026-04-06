@@ -70,6 +70,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+app.UseExceptionHandler(); //global error handling middleware
+
 app.MapControllers();
 
 app.Run();
