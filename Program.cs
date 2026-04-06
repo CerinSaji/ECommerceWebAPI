@@ -6,10 +6,26 @@ using FluentValidation.AspNetCore;
 using DotNetEnv;
 using MongoDB.Driver;
 using ECommerceWebAPI.Data;
+using ECommerceWebAPI.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Versioning;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
 DotNetEnv.Env.Load(); 
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new QueryStringApiVersionReader("api-version"),   // ?api-version=1.0
+        new HeaderApiVersionReader("x-api-version")       // Header: x-api-version:1.0
+    );
+});
 
 //CORS - suited for development, not for production
 builder.Services.AddCors(options =>

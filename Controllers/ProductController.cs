@@ -6,15 +6,18 @@ using AutoMapper;
 using ECommerceWebAPI.Data;
 using MongoDB.Driver;
 
-namespace ECommerceWebAPI.Controllers
+namespace ECommerceWebAPI.Controllers;
+
+//[Route("api/[controller]")]
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+public class ProductController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ProductController : ControllerBase
-    {
-        //private readonly ApplicationContext _context;
-        private readonly MongoDbService _mongoService;
-        private readonly IMapper _mapper; 
+    private readonly MongoDbService _mongoDbService;
+    //private readonly ApplicationContext _context;
+    private readonly MongoDbService _mongoService;
+    private readonly IMapper _mapper; 
 
         public ProductController(MongoDbService mongoService, IMapper mapper) 
         {
@@ -164,6 +167,5 @@ namespace ECommerceWebAPI.Controllers
         private async Task<bool> ProductExists(string id) 
         {
             return await _mongoService.Products.Find(e => e.Id == id).AnyAsync();
-        }
-    }
+        }    
 }
