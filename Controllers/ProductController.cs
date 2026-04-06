@@ -14,7 +14,6 @@ namespace ECommerceWebAPI.Controllers;
 [Route("api/v{version:apiVersion}/[controller]")]
 public class ProductController : ControllerBase
 {
-    private readonly MongoDbService _mongoDbService;
     //private readonly ApplicationContext _context;
     private readonly MongoDbService _mongoService;
     private readonly IMapper _mapper; 

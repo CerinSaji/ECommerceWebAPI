@@ -1,17 +1,13 @@
 //registering services with DI container
-using Microsoft.EntityFrameworkCore;
-using ECommerceWebAPI.Models;
+//using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using DotNetEnv;
-using MongoDB.Driver;
 using ECommerceWebAPI.Data;
-using ECommerceWebAPI.DTOs;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
+//using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
-DotNetEnv.Env.Load(); 
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,13 +23,13 @@ builder.Services.AddApiVersioning(options =>
     );
 });
 
-//CORS - suited for development, not for production
+//CORS - FOR DEV ONLY!!!, not for production
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
         policy =>
         {
-            policy.AllowAnyOrigin()   // Allows any website to call the API
+            policy.AllowAnyOrigin()   // Allows any website to call the API - ONLY FOR DEV FOR NOW
                   .AllowAnyMethod()   // Allows GET, POST, PUT, DELETE
                   .AllowAnyHeader();  // Allows custom headers like Content-Type
         });
@@ -52,7 +48,6 @@ if (string.IsNullOrEmpty(databaseName))
     throw new Exception("CRITICAL: Database name not found. Check your .env file location!");
 }
 
-
 // Add (Registering) services to the container.
 // builder.Services.AddDbContext<ProductContext>(options =>
 //     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -64,6 +59,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<OrderRequestValidator>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 

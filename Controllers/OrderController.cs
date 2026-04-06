@@ -63,6 +63,13 @@ namespace ECommerceWebAPI.Controllers
                     OrderItems = new List<OrderItem>()
                 };
 
+                var orderItem = new OrderItem
+                {
+                    ProductId = orderDto.Items[0].ProductId,
+                    Quantity = orderDto.Items[0].Quantity,
+                    UnitPrice = 0 // Will be set after fetching product details
+                };
+
                 decimal totalAmount = 0;
 
                 //there is a list of items in the order
@@ -90,12 +97,15 @@ namespace ECommerceWebAPI.Controllers
                     totalAmount += lineTotal;
 
                     // Add the separate OrderItem entity to the Order collection
-                    order.OrderItems.Add(new OrderItem
+                    var currentOrderItem = new OrderItem
                     {
                         ProductId = itemDto.ProductId,
                         Quantity = itemDto.Quantity,
-                        UnitPrice = product.Price // Lock in the price at purchase time
-                    });
+                        UnitPrice = product.Price
+                    };
+                    order.OrderItems.Add(currentOrderItem);
+
+                    await _mongoService.OrderItems.InsertOneAsync(currentOrderItem);
                 }
 
                 order.TotalAmount = totalAmount;
@@ -108,6 +118,9 @@ namespace ECommerceWebAPI.Controllers
 
                 var response = _mapper.Map<OrderResponseDto>(order);
                 return CreatedAtAction(nameof(GetOrder), new { id = response.Id }, response);
+
+                //orderitem should also be created 
+
             }
             catch (Exception ex)
             {
@@ -131,7 +144,12 @@ namespace ECommerceWebAPI.Controllers
             {
                 var cursor = await _mongoService.Products.FindAsync(p => p.Id == item.ProductId);
                 var product = await cursor.FirstOrDefaultAsync();
-                if (product != null) product.StockQuantity += item.Quantity;
+                if (product != null) 
+                {
+                    product.StockQuantity += item.Quantity;
+                    await _mongoService.Products.UpdateOneAsync(p => p.Id == product.Id, Builders<Product>.Update.Set(p => p.StockQuantity, product.StockQuantity));
+                    await _mongoService.OrderItems.DeleteOneAsync(oi => oi.Id == item.Id);
+                }
             }
 
             await _mongoService.Orders.DeleteOneAsync(o => o.Id == id);
