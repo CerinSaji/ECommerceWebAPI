@@ -2,6 +2,7 @@ using ECommerceWebAPI.DTOs;
 using ECommerceWebAPI.Data;
 using ECommerceWebAPI.Models;
 using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 
 public class OrderService
 {
@@ -12,6 +13,19 @@ public class OrderService
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+    }
+
+    public async Task<OrderResponseDto> GetAllOrdersAsync()
+    {
+        var orders = await _unitOfWork.Orders.GetAllAsync();
+        return _mapper.Map<OrderResponseDto>(orders);
+    }
+
+    public async Task<OrderResponseDto> GetOrderByIdAsync(int id)
+    {
+        var order = await _unitOfWork.Orders.GetByIdAsync(id);
+        if (order == null) throw new KeyNotFoundException($"Order {id} not found.");
+        return _mapper.Map<OrderResponseDto>(order);
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(OrderRequestDto requestDto)
@@ -60,5 +74,27 @@ public class OrderService
 
         // 6. Map to Response DTO
         return _mapper.Map<OrderResponseDto>(order);
+    }
+
+    public async Task<IActionResult> DeleteOrderAsync(int id)
+    {
+        var order = await _unitOfWork.Orders.GetByIdAsync(id);
+        if (order == null) throw new KeyNotFoundException($"Order {id} not found.");
+
+        // Restore stock for each item
+        foreach (var item in order.OrderItems)
+        {
+            var product = await _unitOfWork.Products.GetByIdAsync(item.ProductId);
+            if (product != null)
+            {
+                product.StockQuantity += item.Quantity;
+                _unitOfWork.Products.Update(product);
+            }
+        }
+
+        _unitOfWork.Orders.Delete(order);
+        await _unitOfWork.CompleteAsync();
+
+        return new NoContentResult();
     }
 }

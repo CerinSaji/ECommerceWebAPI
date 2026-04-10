@@ -14,161 +14,59 @@ namespace ECommerceWebAPI.Controllers
     {
         //private readonly ApplicationContext _context;
         private readonly IMapper _mapper;
-        private readonly MongoDbService _mongoService;
+        //private readonly MongoDbService _mongoService;
+        private readonly OrderService _orderService;
 
-        public OrderController(MongoDbService mongoService, IMapper mapper)
+        public OrderController(MongoDbService mongoService, IMapper mapper, OrderService orderService)
         {
-            _mongoService = mongoService;
+            //_mongoService = mongoService;
             _mapper = mapper;
+            _orderService = orderService;
         }
 
         // GET: api/Order
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderResponseDto>>> GetOrders()
         {
-            var orders = await _mongoService.Orders
-                .Find(_ => true)
-                .ToListAsync();
-            return Ok(_mapper.Map<IEnumerable<OrderResponseDto>>(orders));
+            var orders = await _orderService.GetAllOrdersAsync();
+            return Ok(orders);
         }
 
         // GET: api/Order/5
         [HttpGet("{id}")]
         public async Task<ActionResult<OrderResponseDto>> GetOrder(string id)
         {
-            var order = await _mongoService.Orders
-                .Find(o => o.Id == id)
-                .FirstOrDefaultAsync();
-                //.FirstOrDefaultAsync(o => o.Id == id);
-
-            if (order == null) return NotFound();
-
-            return _mapper.Map<OrderResponseDto>(order);
+            var order = await _orderService.GetOrderByIdAsync(int.TryParse(id, out int orderId) ? orderId : 0);
+            if (orderId == 0) return NotFound();
+            return Ok(order);
         }
 
         // POST: api/Order
         [HttpPost]
-        public async Task<ActionResult<OrderResponseDto>> PostOrder(OrderRequestDto orderDto)
+        public async Task<ActionResult<OrderResponseDto>> PlaceOrder([FromBody] OrderRequestDto request)
         {
-            // Start a transaction to ensure database integrity
-            // using var transaction = await _mongoService._database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-
-            try
-            {
-                var order = new Order
-                {
-                    CustomerId = orderDto.CustomerId,
-                    OrderDate = DateTime.UtcNow,
-                    Status = "Pending",
-                    OrderItems = new List<OrderItem>()
-                };
-
-                var orderItem = new OrderItem
-                {
-                    ProductId = orderDto.Items[0].ProductId,
-                    Quantity = orderDto.Items[0].Quantity,
-                    UnitPrice = 0 // Will be set after fetching product details
-                };
-
-                decimal totalAmount = 0;
-
-                //there is a list of items in the order
-                foreach (var itemDto in orderDto.Items)
-                {
-                    var cursor = await _mongoService.Products.FindAsync(p => p.Id == itemDto.ProductId);
-                    var product = await cursor.FirstOrDefaultAsync();
-                    
-                    if (product == null)
-                        return BadRequest($"Product ID {itemDto.ProductId} not found.");
-
-                    if (product.StockQuantity < itemDto.Quantity)
-                        return BadRequest($"Insufficient stock for {product.Name}. Available: {product.StockQuantity}");
-
-                    // Reduce Stock
-                    Console.WriteLine($"Reducing stock for {product.Name}: {product.StockQuantity} - {itemDto.Quantity}");
-                    product.StockQuantity -= itemDto.Quantity;
-
-                    var update = Builders<Product>.Update.Set(p => p.StockQuantity, product.StockQuantity);
-                    await _mongoService.Products.UpdateOneAsync(p => p.Id == product.Id, update);
-                    Console.WriteLine($"New stock for {product.Name}: {product.StockQuantity}");
-
-                    // Calculate Price
-                    var lineTotal = product.Price * itemDto.Quantity;
-                    totalAmount += lineTotal;
-
-                    // Add the separate OrderItem entity to the Order collection
-                    var currentOrderItem = new OrderItem
-                    {
-                        ProductId = itemDto.ProductId,
-                        Quantity = itemDto.Quantity,
-                        UnitPrice = product.Price
-                    };
-                    order.OrderItems.Add(currentOrderItem);
-
-                    await _mongoService.OrderItems.InsertOneAsync(currentOrderItem);
-                }
-
-                order.TotalAmount = totalAmount;
-
-                await _mongoService.Orders.InsertOneAsync(order);
-                //await _.SaveChangesAsync();
-
-                // Commit the transaction
-                //await transaction.CommitAsync();
-
-                var response = _mapper.Map<OrderResponseDto>(order);
-                return CreatedAtAction(nameof(GetOrder), new { id = response.Id }, response);
-
-                //orderitem should also be created 
-
-            }
-            catch (Exception ex)
-            {
-                //await transaction.RollbackAsync();
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            // The Controller only handles the "Result"
+            var result = await _orderService.CreateOrderAsync(request);
+            
+            return CreatedAtAction(nameof(GetOrder), new { id = result.Id }, result);
         }
 
         // DELETE: api/Order/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(string id)
         {
-            var order = await _mongoService.Orders
-                .Find(o => o.Id == id)
-                .FirstOrDefaultAsync();
-
+            var order = await _orderService.DeleteOrderAsync(int.TryParse(id, out int orderId) ? orderId : 0);
             if (order == null) return NotFound();
-
-            //restore stock when an order is deleted
-            foreach (var item in order.OrderItems)
-            {
-                var cursor = await _mongoService.Products.FindAsync(p => p.Id == item.ProductId);
-                var product = await cursor.FirstOrDefaultAsync();
-                if (product != null) 
-                {
-                    product.StockQuantity += item.Quantity;
-                    await _mongoService.Products.UpdateOneAsync(p => p.Id == product.Id, Builders<Product>.Update.Set(p => p.StockQuantity, product.StockQuantity));
-                    await _mongoService.OrderItems.DeleteOneAsync(oi => oi.Id == item.Id);
-                }
-            }
-
-            await _mongoService.Orders.DeleteOneAsync(o => o.Id == id);
-            //await _mongoService.SaveChangesAsync();
-
             return NoContent();
         }
+
 
         //GET: api/Order/ByCustomer/5
         [HttpGet("ByCustomer/{customerId}")]
         public async Task<ActionResult<IEnumerable<OrderResponseDto>>> GetOrdersByCustomer(string customerId)
         {
-            var orders = await _mongoService.Orders
-                .Find(o => o.CustomerId == customerId)
-                .ToListAsync();
-
-            if (!orders.Any()) return NotFound($"No orders found for Customer ID {customerId}");
-
-            return Ok(_mapper.Map<IEnumerable<OrderResponseDto>>(orders));
+            var orders = await _orderService.GetOrdersByCustomerIdAsync(customerId)
+            if (orders == null) 
         }
 
         //PATCH: api/Order/Status/5

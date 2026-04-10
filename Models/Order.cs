@@ -11,7 +11,7 @@ public class Order
 
     [BsonRepresentation(BsonType.ObjectId)] 
     //must be referenced to a valid customer in the database
-    public string CustomerId { get; set; } //foreign key
+    public int CustomerId { get; set; } //foreign key
     public DateTime OrderDate { get; set; }
     public decimal TotalAmount { get; set; }
     public string Status { get; set; }

@@ -5,7 +5,8 @@ using FluentValidation.AspNetCore;
 using DotNetEnv;
 using ECommerceWebAPI.Data;
 using Microsoft.AspNetCore.Mvc.Versioning;
-//using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.EntityFrameworkCore.Sqlite;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
 Env.Load();
 
@@ -35,24 +36,30 @@ builder.Services.AddCors(options =>
         });
 });
 
-var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
-var databaseName = Environment.GetEnvironmentVariable("MONGODB_DATABASE_NAME");
+// var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
+// var databaseName = Environment.GetEnvironmentVariable("MONGODB_DATABASE_NAME");
 
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new Exception("CRITICAL: Connection string not found. Check your .env file location!");
-}
+// if (string.IsNullOrEmpty(connectionString))
+// {
+//     throw new Exception("CRITICAL: Connection string not found. Check your .env file location!");
+// }
 
-if (string.IsNullOrEmpty(databaseName))
-{
-    throw new Exception("CRITICAL: Database name not found. Check your .env file location!");
-}
+// if (string.IsNullOrEmpty(databaseName))
+// {
+//     throw new Exception("CRITICAL: Database name not found. Check your .env file location!");
+// }
 
 // Add (Registering) services to the container.
 //builder.Services.AddDbContext<ProductContext>(options =>
 //    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddSingleton<MongoDbService>(sp => 
-    new MongoDbService(connectionString!, databaseName!));
+// builder.Services.AddSingleton<MongoDbService>(sp => 
+//     new MongoDbService(connectionString!, databaseName!));
+
+
+builder.Services.AddDbContext<DbContext>(options =>
+    options.UseSqlite("Data Source=MyStore.db"));
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -81,7 +88,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection(); //browser does not follow CORS on redirects
 
-app.UseCors("AllowAll"); //must be placed AFTER UseRouting and BEFORE UseAuthorization
+app.UseCors("AllowAll"); //must be placed AFTER UseHttpsRedirection and BEFORE UseAuthorization
 
 app.UseAuthorization();
 

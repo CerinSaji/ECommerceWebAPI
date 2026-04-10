@@ -12,14 +12,15 @@ namespace ECommerceWebAPI.Controllers
     [ApiController]
     public class CustomerController : ControllerBase
     {
-        //private readonly ApplicationContext _context;
+        private readonly ApplicationContext _context;
         private readonly IMapper _mapper;
-        private readonly MongoDbService _mongoService;
+        //private readonly MongoDbService _mongoService;
 
         public CustomerController(MongoDbService mongoService, IMapper mapper)
         {
-            _mongoService = mongoService;
+            //_mongoService = mongoService;
             _mapper = mapper;
+            _context = new ApplicationContext(new DbContextOptions<ApplicationContext>());
         }
 
         // GET: api/Customer
