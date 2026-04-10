@@ -35,7 +35,7 @@ public class CustomerService
         return _mapper.Map<CustomerDto>(customer);
     }
 
-    public async Task UpdateCustomerAsync(int id, CustomerDto customerDto)
+    public async Task<IActionResult> UpdateCustomerAsync(int id, CustomerDto customerDto)
     {
         var customerInDb = await _unitOfWork.Customers.GetByIdAsync(id);
         if (customerInDb == null) throw new KeyNotFoundException($"Customer {id} not found.");
@@ -43,14 +43,17 @@ public class CustomerService
         _mapper.Map(customerDto, customerInDb);
         _unitOfWork.Customers.Update(customerInDb);
         await _unitOfWork.CompleteAsync();
+
+        return new NoContentResult();
     }
 
-    public async Task DeleteCustomerAsync(int id)
+    public async Task<IActionResult> DeleteCustomerAsync(int id)
     {
         var customer = await _unitOfWork.Customers.GetByIdAsync(id);
         if (customer == null) throw new KeyNotFoundException($"Customer {id} not found.");
 
         _unitOfWork.Customers.Delete(customer);
         await _unitOfWork.CompleteAsync();
+        return new NoContentResult();
     }
 }

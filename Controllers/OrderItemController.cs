@@ -35,7 +35,7 @@ namespace ECommerceWebAPI.Controllers
 
         // GET: api/OrderItem/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<OrderItemResponseDto>> GetOrderItem(string id)
+        public async Task<ActionResult<OrderItemResponseDto>> GetOrderItem(int id)
         {
             var orderItem = await _mongoService.OrderItems
                 .Find(oi => oi.Id == id)
@@ -48,7 +48,7 @@ namespace ECommerceWebAPI.Controllers
 
         // GET: api/OrderItem/ByOrder/5
         [HttpGet("ByOrder/{orderId}")]
-        public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetItemsByOrder(string orderId)
+        public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetItemsByOrder(int orderId)
         {
             var items = await _mongoService.OrderItems
                 .Find(oi => oi.OrderId == orderId)

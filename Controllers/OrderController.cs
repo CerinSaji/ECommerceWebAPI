@@ -17,7 +17,7 @@ namespace ECommerceWebAPI.Controllers
         //private readonly MongoDbService _mongoService;
         private readonly OrderService _orderService;
 
-        public OrderController(MongoDbService mongoService, IMapper mapper, OrderService orderService)
+        public OrderController(IMapper mapper, OrderService orderService)
         {
             //_mongoService = mongoService;
             _mapper = mapper;

@@ -1,10 +1,7 @@
 using ECommerceWebAPI.DTOs;
-using ECommerceWebAPI.Data;
 using ECommerceWebAPI.Models;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using ECommerceWebAPI.Data;
-
 
 public class OrderService
 {
