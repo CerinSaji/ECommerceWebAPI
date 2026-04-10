@@ -1,5 +1,5 @@
 //registering services with DI container
-//using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using DotNetEnv;
@@ -49,8 +49,8 @@ if (string.IsNullOrEmpty(databaseName))
 }
 
 // Add (Registering) services to the container.
-// builder.Services.AddDbContext<ProductContext>(options =>
-//     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//builder.Services.AddDbContext<ProductContext>(options =>
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddSingleton<MongoDbService>(sp => 
     new MongoDbService(connectionString!, databaseName!));
 
@@ -78,9 +78,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowAll"); //must be placed AFTER UseRouting and BEFORE UseAuthorization
 
-app.UseHttpsRedirection();
+app.UseHttpsRedirection(); //browser does not follow CORS on redirects
+
+app.UseCors("AllowAll"); //must be placed AFTER UseRouting and BEFORE UseAuthorization
 
 app.UseAuthorization();
 
