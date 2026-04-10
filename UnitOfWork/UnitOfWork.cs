@@ -8,8 +8,8 @@ public class UnitOfWork : IUnitOfWork
     public IGenericRepository<Product> Products { get; private set; }
     public IOrderRepository Orders { get; private set; }
     public IGenericRepository<OrderItem> OrderItems { get; private set; }
-
     public IGenericRepository<Customer> Customers { get; private set; }
+    public IGenericRepository<Category> Categories { get; private set; }
     public UnitOfWork(DbContext context)
     {
         _context = context;
@@ -17,6 +17,7 @@ public class UnitOfWork : IUnitOfWork
         Orders = new OrderRepository(_context);
         Customers = new GenericRepository<Customer>(_context);
         OrderItems = new GenericRepository<OrderItem>(_context);
+        Categories = new GenericRepository<Category>(_context);
     }
 
     public async Task<int> CompleteAsync()

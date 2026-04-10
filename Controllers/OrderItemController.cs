@@ -14,49 +14,43 @@ namespace ECommerceWebAPI.Controllers
     {
         //private readonly ApplicationContext _context;
         private readonly IMapper _mapper;
-        private readonly MongoDbService _mongoService;
+        private readonly OrderItemService _orderItemService;
+        private readonly OrderService _orderService;
 
-        public OrderItemController(MongoDbService mongoService, IMapper mapper)
+        public OrderItemController(OrderItemService orderItemService, IMapper mapper, OrderService orderService)
         {
-            _mongoService = mongoService;
+            _orderItemService = orderItemService;
             _mapper = mapper;
+            _orderService = orderService;
         }
 
         // GET: api/OrderItem
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetOrderItems()
         {
-            var items = await _mongoService.OrderItems
-                .Find(_ => true)
-                .ToListAsync();
-
-            return Ok(_mapper.Map<IEnumerable<OrderItemResponseDto>>(items));
+            var orderItems = await _orderItemService.GetOrderItemsAsync();
+            return Ok(orderItems);
         }
 
         // GET: api/OrderItem/5
         [HttpGet("{id}")]
         public async Task<ActionResult<OrderItemResponseDto>> GetOrderItem(int id)
         {
-            var orderItem = await _mongoService.OrderItems
-                .Find(oi => oi.Id == id)
-                .FirstOrDefaultAsync();
-
+            var orderItem = await _orderItemService.GetOrderItemByIdAsync(id);
             if (orderItem == null) return NotFound();
-
-            return _mapper.Map<OrderItemResponseDto>(orderItem);
+            return Ok(orderItem);
         }
 
         // GET: api/OrderItem/ByOrder/5
         [HttpGet("ByOrder/{orderId}")]
         public async Task<ActionResult<IEnumerable<OrderItemResponseDto>>> GetItemsByOrder(int orderId)
         {
-            var items = await _mongoService.OrderItems
-                .Find(oi => oi.OrderId == orderId)
-                .ToListAsync();
-
-            if (!items.Any()) return NotFound($"No items found for Order ID {orderId}");
-
-            return Ok(_mapper.Map<IEnumerable<OrderItemResponseDto>>(items));
+            //first get the order
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+            if (order == null) return NotFound($"Order {orderId} not found.");
+            //then get the items for that order
+            var orderItems = order.Items.Select(oi => _mapper.Map<OrderItemResponseDto>(oi));
+            return Ok(orderItems);
         }
     }
 }
