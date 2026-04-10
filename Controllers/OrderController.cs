@@ -65,28 +65,17 @@ namespace ECommerceWebAPI.Controllers
         [HttpGet("ByCustomer/{customerId}")]
         public async Task<ActionResult<IEnumerable<OrderResponseDto>>> GetOrdersByCustomer(string customerId)
         {
-            var orders = await _orderService.GetOrdersByCustomerIdAsync(customerId)
-            if (orders == null) 
+            var orders = await _orderService.GetCustomerOrders(int.TryParse(customerId, out int customerIdInt) ? customerIdInt : 0);
+            if (orders == null) return NotFound();
+            return Ok(orders);
         }
 
         //PATCH: api/Order/Status/5
         [HttpPatch("Status/{id}")]
         public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] string newStatus)
         {
-            var order = await _mongoService.Orders
-                .Find(o => o.Id == id)
-                .FirstOrDefaultAsync();
-
-            if (order == null) return NotFound();
-
-            // Validate newStatus against allowed values (e.g., "Pending", "Shipped", "Delivered", "Cancelled")
-            var allowedStatuses = new[] { "Pending", "Shipped", "Delivered", "Cancelled" };
-            if (!allowedStatuses.Contains(newStatus))
-                return BadRequest($"Invalid status. Allowed values are: {string.Join(", ", allowedStatuses)}");
-
-            var update = Builders<Order>.Update.Set(o => o.Status, newStatus);
-            await _mongoService.Orders.UpdateOneAsync(o => o.Id == id, update);
-
+            var order = await _orderService.UpdateOrderStatusAsync(int.TryParse(id, out int orderId) ? orderId : 0, newStatus);
+            if (order == null) return NotFound();   
             return NoContent();
         }
     }

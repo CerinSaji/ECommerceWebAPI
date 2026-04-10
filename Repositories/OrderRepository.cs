@@ -10,14 +10,4 @@ public class OrderRepository : GenericRepository<Order>, IOrderRepository
     {
         return await _dbSet.Where(o => o.CustomerId == customerId).ToListAsync();
     }
-
-    public async Task UpdateStatusAsync(int orderId, string status)
-    {
-        var order = await GetByIdAsync(orderId);
-        if (order != null)
-        {
-            order.Status = status;
-            Update(order); //generic repo method is used to update order
-        }
-    }
 }

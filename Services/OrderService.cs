@@ -3,6 +3,8 @@ using ECommerceWebAPI.Data;
 using ECommerceWebAPI.Models;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using ECommerceWebAPI.Data;
+
 
 public class OrderService
 {
@@ -93,6 +95,32 @@ public class OrderService
         }
 
         _unitOfWork.Orders.Delete(order);
+        await _unitOfWork.CompleteAsync();
+
+        return new NoContentResult();
+    }
+
+    public async Task<OrderResponseDto> GetCustomerOrders(int customerId)
+    {
+        var orders = await _unitOfWork.Orders.GetOrdersByCustomerIdAsync(customerId);
+        
+        return _mapper.Map<OrderResponseDto>(orders);
+    }
+
+    public async Task<IActionResult> UpdateOrderStatusAsync(int orderId, string newStatus)
+    {
+        // await _unitOfWork.Orders.UpdateStatusAsync(orderId, newStatus);
+        // await _unitOfWork.CompleteAsync();
+        var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
+        if (order == null) throw new KeyNotFoundException($"Order {orderId} not found.");
+
+        // Validate newStatus against allowed values (e.g., "Pending", "Shipped", "Delivered", "Cancelled")
+        var allowedStatuses = new[] { "Pending", "Shipped", "Delivered", "Cancelled" };
+        if (!allowedStatuses.Contains(newStatus))
+            throw new InvalidOperationException($"Invalid status: {newStatus}. Allowed values are: {string.Join(", ", allowedStatuses)}");  
+            
+        order.Status = newStatus;
+        _unitOfWork.Orders.Update(order);
         await _unitOfWork.CompleteAsync();
 
         return new NoContentResult();

@@ -1,12 +1,6 @@
 namespace ECommerceWebAPI.Models;
-
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 public class Customer
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)] 
-
     public int Id { get; set; } //primary key
     public string Name { get; set; }
     public string Email { get; set; }

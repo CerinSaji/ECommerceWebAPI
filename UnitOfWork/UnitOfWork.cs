@@ -7,13 +7,13 @@ public class UnitOfWork : IUnitOfWork
 
     // Repositories are lazily loaded
     public IGenericRepository<Product> Products { get; private set; }
-    public IGenericRepository<Order> Orders { get; private set; }
+    public IOrderRepository Orders { get; private set; }
 
     public UnitOfWork(DbContext context)
     {
         _context = context;
         Products = new GenericRepository<Product>(_context);
-        Orders = new GenericRepository<Order>(_context);
+        Orders = new OrderRepository(_context);
     }
 
     public async Task<int> CompleteAsync()

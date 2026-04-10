@@ -1,15 +1,8 @@
 namespace ECommerceWebAPI.Models;
-
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;    
+  
 public class Order
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)] 
-
-    public string? Id { get; set; } //primary key
-
-    [BsonRepresentation(BsonType.ObjectId)] 
+    public int Id { get; set; } //primary key
     //must be referenced to a valid customer in the database
     public int CustomerId { get; set; } //foreign key
     public DateTime OrderDate { get; set; }
